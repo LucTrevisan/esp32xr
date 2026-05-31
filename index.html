@@ -441,8 +441,14 @@ async function iniciarCena() {
     rootGLB.position = new BABYLON.Vector3(0, 0.15, 0);
 
     // Reparenta todos os meshes para o novo nó pai
+    // pinion_0 é excluído da animação e da cena
     meshesGLB.forEach(m => {
-      m.parent = rootGLB;
+      if (m.name === 'pinion_0') {
+        m.isVisible = false;   // esconde da cena
+        m.setEnabled(false);   // desativa completamente
+      } else {
+        m.parent = rootGLB;
+      }
     });
 
     const raiz = rootGLB;
