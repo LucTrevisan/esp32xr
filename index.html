@@ -205,6 +205,7 @@ function atualizarHUD(v) {
 let valorSensor = 0;   // 0.0 a 1.0 — vem do ESP32
 let rotAcum     = 0;   // acumulador de rotação para telemetria
 let meshesGLB   = [];  // todos os meshes do modelo carregado
+let rootGLB     = null;// TransformNode raiz do GLB (__root__)
 let usandoGLB   = false;
 
 // ═══════════════════════════════════════════════════════════
@@ -434,8 +435,12 @@ async function iniciarCena() {
     // Esconde fallback procedural
     engGrupo.setEnabled(false);
 
-    // Pega o nó raiz do GLB
-    const raiz = meshesGLB[0];
+    // __root__ é TransformNode — buscar nos transformNodes do resultado
+    rootGLB = (resultado.transformNodes || []).find(n => n.name === '__root__')
+           || scene.getTransformNodeByName('__root__')
+           || meshesGLB[0];
+
+    const raiz = rootGLB;
 
     // Calcula bounding box para escala automática
     raiz.computeWorldMatrix(true);
@@ -470,13 +475,9 @@ async function iniciarCena() {
     // vel = 0 quando sensor=0, vel máxima quando sensor=1
     const vel = 0.005 + valorSensor * 0.15;
 
-    if (usandoGLB && meshesGLB.length > 0) {
-      // ── GLB: gira todos os meshes exceto o nó raiz __root__ ──
-      meshesGLB.forEach(m => {
-        if (m.name !== '__root__' && m.getTotalVertices() > 0) {
-          m.rotation.y += vel;
-        }
-      });
+    if (usandoGLB && rootGLB) {
+      // __root__ é TransformNode — girar ele arrasta todos os filhos
+      rootGLB.rotation.y += vel;
     } else {
       // ── Fallback procedural ──
       engGrupo.rotation.y += vel;
