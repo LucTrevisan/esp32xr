@@ -4,49 +4,41 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>SENAI XR Lab — ESP32</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
 <style>
   :root {
-    --senai-red:   #E3000F;
-    --senai-dark:  #1a0002;
-    --senai-panel: rgba(20,2,4,0.92);
-    --accent:      #FF3B2F;
-    --teal:        #00C9A7;
-    --gold:        #F5A623;
-    --text:        #F0E6E6;
-    --dim:         rgba(240,230,230,0.45);
-    --border:      rgba(227,0,15,0.3);
-    --mono:        'Share Tech Mono', monospace;
-    --head:        'Rajdhani', sans-serif;
+    --red:    #E3000F;
+    --panel:  rgba(20,2,4,0.92);
+    --teal:   #00C9A7;
+    --gold:   #F5A623;
+    --text:   #F0E6E6;
+    --dim:    rgba(240,230,230,0.45);
+    --border: rgba(227,0,15,0.3);
+    --mono:   'Share Tech Mono', monospace;
+    --head:   'Rajdhani', sans-serif;
   }
   * { margin:0; padding:0; box-sizing:border-box }
   body { background:#0a0002; color:var(--text); font-family:var(--mono); overflow:hidden }
 
-  /* ── HUD superior ── */
+  /* HUD */
   #hud {
     position:fixed; top:0; left:0; right:0; z-index:10;
-    display:none; align-items:center; gap:0;
-    height:48px;
-    background:var(--senai-panel);
+    display:none; align-items:center;
+    height:48px; background:var(--panel);
     border-bottom:1px solid var(--border);
   }
-  #logo-wrap {
-    display:flex; align-items:center; gap:10px;
-    padding:0 18px;
+  .hud-block {
+    display:flex; align-items:center; gap:8px;
+    padding:0 16px; height:100%;
     border-right:1px solid var(--border);
-    height:100%;
   }
+  .hud-block:last-child { border-right:none }
   #logo-text {
     font-family:var(--head); font-size:22px; font-weight:700;
-    color:var(--senai-red); letter-spacing:3px;
+    color:var(--red); letter-spacing:3px;
     text-shadow:0 0 12px rgba(227,0,15,0.5);
   }
-  #logo-sub { font-size:9px; color:var(--dim); letter-spacing:2px; line-height:1.3 }
-  #conn-wrap {
-    display:flex; align-items:center; gap:8px;
-    padding:0 16px; border-right:1px solid var(--border); height:100%;
-  }
+  #logo-sub { font-size:9px; color:var(--dim); letter-spacing:2px; line-height:1.4 }
   #dot {
     width:7px; height:7px; border-radius:50%;
     background:#e24b4a; box-shadow:0 0 6px #e24b4a; transition:all .3s;
@@ -54,42 +46,35 @@
   #dot.on { background:var(--teal); box-shadow:0 0 8px var(--teal) }
   #status-txt { font-size:10px; color:var(--dim); min-width:170px }
   #sensor-wrap { flex:1; display:flex; align-items:center; gap:10px; padding:0 16px }
-  #sensor-label { font-size:9px; color:var(--dim); letter-spacing:1px }
+  #sensor-label { font-size:9px; color:var(--dim); letter-spacing:1px; white-space:nowrap }
   #barra-wrap { flex:1; height:4px; background:rgba(255,255,255,0.08); border-radius:2px; overflow:hidden }
   #barra {
     height:100%; width:0%;
-    background:linear-gradient(90deg,var(--teal),var(--gold),var(--senai-red));
-    border-radius:2px; transition:width .1s;
+    background:linear-gradient(90deg,var(--teal),var(--gold),var(--red));
+    border-radius:2px; transition:width .08s;
   }
   #num { font-size:12px; color:var(--gold); min-width:52px; text-align:right }
-  #rpm-wrap {
-    padding:0 16px; border-left:1px solid var(--border);
-    display:flex; flex-direction:column; align-items:flex-end;
-    justify-content:center; height:100%; gap:1px;
-  }
   #rpm-label { font-size:8px; color:var(--dim); letter-spacing:1px }
   #rpm-val { font-family:var(--head); font-size:18px; color:var(--gold) }
 
-  /* ── Botões XR ── */
+  /* Botões XR */
   #btn-wrap {
     position:fixed; bottom:20px; left:50%; transform:translateX(-50%);
     display:none; gap:10px; z-index:10;
   }
   .btn-xr {
     padding:9px 22px; border-radius:4px;
-    border:1px solid var(--border);
-    background:var(--senai-panel);
+    border:1px solid var(--border); background:var(--panel);
     color:var(--text); font-family:var(--mono);
-    font-size:12px; cursor:pointer; letter-spacing:1px;
-    transition:all .2s;
+    font-size:12px; cursor:pointer; letter-spacing:1px; transition:all .2s;
   }
   .btn-xr:hover:not(:disabled) {
-    background:var(--senai-red); border-color:var(--senai-red);
+    background:var(--red); border-color:var(--red);
     box-shadow:0 0 12px rgba(227,0,15,0.4);
   }
   .btn-xr:disabled { opacity:0.3; cursor:not-allowed }
 
-  /* ── Scanlines ── */
+  /* Scanlines */
   #scanlines {
     position:fixed; inset:0; z-index:5; pointer-events:none;
     background:repeating-linear-gradient(
@@ -98,7 +83,7 @@
     );
   }
 
-  /* ── Telemetria canto inferior direito ── */
+  /* Telemetria */
   #telemetry {
     position:fixed; bottom:20px; right:20px; z-index:10;
     display:none; flex-direction:column; gap:4px; align-items:flex-end;
@@ -106,7 +91,7 @@
   .telem-row { font-size:10px; color:var(--dim) }
   .telem-val { color:var(--teal) }
 
-  /* ── Loading ── */
+  /* Loading */
   #loading {
     position:fixed; inset:0; z-index:20;
     display:flex; flex-direction:column;
@@ -115,19 +100,21 @@
   }
   #loading-logo {
     font-family:var(--head); font-size:52px; font-weight:700;
-    color:var(--senai-red); letter-spacing:8px;
-    text-shadow:0 0 30px rgba(227,0,15,0.6);
+    color:var(--red); letter-spacing:8px;
     animation:pulse 2s ease-in-out infinite;
   }
   @keyframes pulse {
     0%,100%{ text-shadow:0 0 20px rgba(227,0,15,0.4) }
     50%    { text-shadow:0 0 40px rgba(227,0,15,0.9) }
   }
-  #loading-sub  { font-size:11px; color:var(--dim); letter-spacing:3px }
-  #loading-txt  { font-size:11px; color:var(--dim); margin-top:8px }
-  #prog-wrap    { width:220px; height:2px; background:rgba(255,255,255,0.08); border-radius:1px }
-  #prog         { height:100%; width:0%; background:var(--senai-red); border-radius:1px; transition:width .3s; box-shadow:0 0 8px var(--senai-red) }
-  #erro         { color:var(--accent); font-size:11px; display:none; text-align:center }
+  #loading-sub { font-size:11px; color:var(--dim); letter-spacing:3px }
+  #loading-txt { font-size:11px; color:var(--dim) }
+  #prog-wrap { width:220px; height:2px; background:rgba(255,255,255,0.08); border-radius:1px }
+  #prog {
+    height:100%; width:0%; background:var(--red);
+    border-radius:1px; transition:width .3s; box-shadow:0 0 8px var(--red);
+  }
+  #erro { color:#FF3B2F; font-size:11px; display:none; text-align:center }
 
   canvas { width:100%; height:100vh; display:block }
 </style>
@@ -136,6 +123,7 @@
 
 <div id="scanlines"></div>
 
+<!-- Loading -->
 <div id="loading">
   <div id="loading-logo">SENAI</div>
   <div id="loading-sub">XR LAB · ESP32 · MECATRÔNICA</div>
@@ -144,14 +132,15 @@
   <div id="erro"></div>
 </div>
 
+<!-- HUD superior -->
 <div id="hud">
-  <div id="logo-wrap">
+  <div class="hud-block">
     <div>
       <div id="logo-text">SENAI</div>
       <div id="logo-sub">XR LAB<br>MECATRÔNICA</div>
     </div>
   </div>
-  <div id="conn-wrap">
+  <div class="hud-block">
     <div id="dot"></div>
     <span id="status-txt">Aguardando ESP32...</span>
   </div>
@@ -160,31 +149,38 @@
     <div id="barra-wrap"><div id="barra"></div></div>
     <span id="num">0.000</span>
   </div>
-  <div id="rpm-wrap">
-    <div id="rpm-label">RPM SIM</div>
-    <div id="rpm-val">0</div>
+  <div class="hud-block">
+    <div>
+      <div id="rpm-label">RPM SIM</div>
+      <div id="rpm-val">0</div>
+    </div>
   </div>
 </div>
 
+<!-- Botões XR -->
 <div id="btn-wrap">
   <button class="btn-xr" id="btn-vr">[ VR IMERSIVO ]</button>
   <button class="btn-xr" id="btn-ar">[ AR PASSTHROUGH ]</button>
 </div>
 
+<!-- Telemetria -->
 <div id="telemetry">
-  <div class="telem-row">ALTURA: <span class="telem-val" id="t-alt">0.00m</span></div>
   <div class="telem-row">ROTAÇÃO: <span class="telem-val" id="t-rot">0°</span></div>
   <div class="telem-row">TEMP SIM: <span class="telem-val" id="t-temp">20.0°C</span></div>
+  <div class="telem-row">WS: <span class="telem-val" id="t-ws">--</span></div>
 </div>
 
 <canvas id="cvs" style="display:none"></canvas>
 
 <script>
-// ── URL do túnel Cloudflare (WSS) ────────────────────────────
-// Gerar com: cloudflared tunnel --url http://IP_ESP32:81
-const WSS_URL = "wss://previously-tune-urgent-similar.trycloudflare.com";
-// ────────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════
+//  CONFIGURAÇÃO — altere aqui quando o túnel mudar
+// ═══════════════════════════════════════════════════════════
+const WSS_URL   = "wss://previously-tune-urgent-similar.trycloudflare.com";
+const MODEL_URL = "assets/models/engrenagem.glb";
+// ═══════════════════════════════════════════════════════════
 
+// ── Utilitários de loading ───────────────────────────────────
 function setProgresso(pct, txt) {
   document.getElementById('prog').style.width = pct + '%';
   if (txt) document.getElementById('loading-txt').textContent = txt;
@@ -192,10 +188,30 @@ function setProgresso(pct, txt) {
 function mostrarErro(msg) {
   const el = document.getElementById('erro');
   el.textContent = msg; el.style.display = 'block';
-  document.getElementById('loading-txt').textContent = 'Falha';
+  document.getElementById('loading-txt').textContent = 'Falha ao carregar';
 }
 
+// ── Atualiza HUD ─────────────────────────────────────────────
+function atualizarHUD(v) {
+  const rpm = Math.round(v * 3600);
+  document.getElementById('barra').style.width   = (v * 100) + '%';
+  document.getElementById('num').textContent     = v.toFixed(3);
+  document.getElementById('rpm-val').textContent = rpm;
+  document.getElementById('t-rot').textContent   = (rotAcum * 180 / Math.PI % 360).toFixed(0) + '°';
+  document.getElementById('t-temp').textContent  = (20 + v * 60).toFixed(1) + '°C';
+}
+
+// ── Estado global ────────────────────────────────────────────
+let valorSensor = 0;   // 0.0 a 1.0 — vem do ESP32
+let rotAcum     = 0;   // acumulador de rotação para telemetria
+let meshesGLB   = [];  // todos os meshes do modelo carregado
+let usandoGLB   = false;
+
+// ═══════════════════════════════════════════════════════════
+//  CENA BABYLON.JS
+// ═══════════════════════════════════════════════════════════
 async function iniciarCena() {
+  // Mostra UI
   document.getElementById('loading').style.display   = 'none';
   document.getElementById('hud').style.display       = 'flex';
   document.getElementById('btn-wrap').style.display  = 'flex';
@@ -203,33 +219,33 @@ async function iniciarCena() {
   document.getElementById('cvs').style.display       = 'block';
 
   const canvas = document.getElementById('cvs');
-  const engine = new BABYLON.Engine(canvas, true);
+  const engine = new BABYLON.Engine(canvas, true, { preserveDrawingBuffer: true });
   const scene  = new BABYLON.Scene(engine);
   scene.clearColor = new BABYLON.Color4(0.04, 0.01, 0.01, 1);
 
-  // Neblina industrial
+  // Neblina
   scene.fogMode    = BABYLON.Scene.FOGMODE_EXP2;
   scene.fogColor   = new BABYLON.Color3(0.06, 0.01, 0.01);
-  scene.fogDensity = 0.035;
+  scene.fogDensity = 0.03;
 
-  // ── Câmera ───────────────────────────────────────────────
+  // ── Câmera ─────────────────────────────────────────────
   const cam = new BABYLON.ArcRotateCamera(
-    'cam', -Math.PI/2.2, 1.05, 10, new BABYLON.Vector3(0,1,0), scene
+    'cam', -Math.PI / 2.2, 1.05, 10, new BABYLON.Vector3(0, 1, 0), scene
   );
   cam.attachControl(canvas, true);
   cam.lowerRadiusLimit = 3;
   cam.upperRadiusLimit = 25;
   cam.lowerBetaLimit   = 0.3;
 
-  // ── Iluminação ───────────────────────────────────────────
+  // ── Iluminação ─────────────────────────────────────────
   const ambLuz = new BABYLON.HemisphericLight('amb', new BABYLON.Vector3(0,1,0), scene);
-  ambLuz.intensity   = 0.3;
+  ambLuz.intensity   = 0.35;
   ambLuz.diffuse     = new BABYLON.Color3(0.6, 0.7, 1.0);
   ambLuz.groundColor = new BABYLON.Color3(0.1, 0.05, 0.05);
 
   const spot = new BABYLON.SpotLight(
     'spot', new BABYLON.Vector3(0,6,0), new BABYLON.Vector3(0,-1,0),
-    Math.PI/3, 2, scene
+    Math.PI / 3, 2, scene
   );
   spot.diffuse   = new BABYLON.Color3(1.0, 0.05, 0.05);
   spot.intensity = 1.2;
@@ -238,7 +254,7 @@ async function iniciarCena() {
   fill.diffuse   = new BABYLON.Color3(0.0, 0.8, 0.7);
   fill.intensity = 0.5;
 
-  // ── Chão ─────────────────────────────────────────────────
+  // ── Chão metálico ──────────────────────────────────────
   const chao = BABYLON.MeshBuilder.CreateGround('chao', {width:20, height:20}, scene);
   const matChao = new BABYLON.StandardMaterial('mchao', scene);
   matChao.diffuseColor  = new BABYLON.Color3(0.12, 0.10, 0.10);
@@ -246,7 +262,7 @@ async function iniciarCena() {
   matChao.specularPower = 64;
   chao.material = matChao;
 
-  // Grade metálica
+  // Grade
   const linhas = [];
   for (let i = -10; i <= 10; i++) {
     linhas.push([new BABYLON.Vector3(i,0.005,-10), new BABYLON.Vector3(i,0.005,10)]);
@@ -256,25 +272,23 @@ async function iniciarCena() {
   grade.color = new BABYLON.Color3(0.25, 0.18, 0.18);
   grade.alpha = 0.6;
 
-  // ── Plataforma central ───────────────────────────────────
-  const plataforma = BABYLON.MeshBuilder.CreateCylinder(
-    'plat', {diameter:3, height:0.15, tessellation:32}, scene
-  );
-  plataforma.position.y = 0.075;
-  const matPlat = new BABYLON.StandardMaterial('mp', scene);
-  matPlat.diffuseColor  = new BABYLON.Color3(0.18, 0.08, 0.08);
-  matPlat.specularColor = new BABYLON.Color3(0.6, 0.6, 0.6);
+  // ── Plataforma ─────────────────────────────────────────
+  const plat = BABYLON.MeshBuilder.CreateCylinder('plat',{diameter:3,height:0.15,tessellation:32},scene);
+  plat.position.y = 0.075;
+  const matPlat = new BABYLON.StandardMaterial('mplat',scene);
+  matPlat.diffuseColor  = new BABYLON.Color3(0.18,0.08,0.08);
+  matPlat.specularColor = new BABYLON.Color3(0.6,0.6,0.6);
   matPlat.specularPower = 128;
-  plataforma.material = matPlat;
+  plat.material = matPlat;
 
-  const anel = BABYLON.MeshBuilder.CreateTorus('anel', {diameter:3.2, thickness:0.06, tessellation:48}, scene);
+  const anel = BABYLON.MeshBuilder.CreateTorus('anel',{diameter:3.2,thickness:0.06,tessellation:48},scene);
   anel.position.y = 0.1;
-  const matAnel = new BABYLON.StandardMaterial('ma', scene);
-  matAnel.diffuseColor  = new BABYLON.Color3(0.9, 0.05, 0.05);
-  matAnel.emissiveColor = new BABYLON.Color3(0.4, 0.0, 0.0);
+  const matAnel = new BABYLON.StandardMaterial('manel',scene);
+  matAnel.diffuseColor  = new BABYLON.Color3(0.9,0.05,0.05);
+  matAnel.emissiveColor = new BABYLON.Color3(0.4,0.0,0.0);
   anel.material = matAnel;
 
-  // ── Estrutura industrial ─────────────────────────────────
+  // ── Estrutura industrial ───────────────────────────────
   [[-7,0,-7],[-7,0,7],[7,0,-7],[7,0,7]].forEach(([x,y,z],i) => {
     const col = BABYLON.MeshBuilder.CreateBox('col'+i,{width:0.4,height:6,depth:0.4},scene);
     col.position = new BABYLON.Vector3(x,3,z);
@@ -282,11 +296,10 @@ async function iniciarCena() {
     mc.diffuseColor = new BABYLON.Color3(0.15,0.12,0.12);
     col.material = mc;
   });
-
   [[0,6,7],[0,6,-7],[-7,6,0],[7,6,0]].forEach(([x,y,z],i) => {
     const vig = BABYLON.MeshBuilder.CreateBox('vig'+i,{width:0.2,height:0.2,depth:14},scene);
     vig.position = new BABYLON.Vector3(x,y,z);
-    vig.rotation.y = (i < 2) ? 0 : Math.PI/2;
+    vig.rotation.y = i < 2 ? 0 : Math.PI/2;
     const mv = new BABYLON.StandardMaterial('mv'+i,scene);
     mv.diffuseColor = new BABYLON.Color3(0.2,0.15,0.15);
     vig.material = mv;
@@ -299,18 +312,17 @@ async function iniciarCena() {
     const ml = new BABYLON.StandardMaterial('ml'+i,scene);
     ml.emissiveColor = new BABYLON.Color3(1.0,0.7,0.3);
     lamp.material = ml;
-    const pl = new BABYLON.PointLight('pl'+i, new BABYLON.Vector3(x,y-0.2,z), scene);
-    pl.diffuse    = new BABYLON.Color3(1.0,0.6,0.2);
-    pl.intensity  = 0.3;
-    pl.range      = 6;
+    const pl = new BABYLON.PointLight('pl'+i,new BABYLON.Vector3(x,y-0.2,z),scene);
+    pl.diffuse = new BABYLON.Color3(1.0,0.6,0.2);
+    pl.intensity = 0.3; pl.range = 6;
   });
 
-  // ── Painéis SENAI nas paredes ────────────────────────────
+  // ── Painéis SENAI ──────────────────────────────────────
   [
-    {pos:new BABYLON.Vector3(-5,2,-9.5), rot:0,          txt:'SENAI · MECATRÔNICA'},
-    {pos:new BABYLON.Vector3( 5,2,-9.5), rot:0,          txt:'ESP32 · WEBSOCKET · XR'},
-    {pos:new BABYLON.Vector3(-9.5,2,0),  rot:Math.PI/2,  txt:'ANTONIO ADOLPHE LOBBE'},
-    {pos:new BABYLON.Vector3( 9.5,2,0),  rot:-Math.PI/2, txt:'SÃO CARLOS · SP'},
+    {pos:new BABYLON.Vector3(-5,2,-9.5), rot:0,           txt:'SENAI · MECATRÔNICA'},
+    {pos:new BABYLON.Vector3( 5,2,-9.5), rot:0,           txt:'ESP32 · WEBSOCKET · XR'},
+    {pos:new BABYLON.Vector3(-9.5,2,0),  rot:Math.PI/2,   txt:'ANTONIO ADOLPHE LOBBE'},
+    {pos:new BABYLON.Vector3( 9.5,2,0),  rot:-Math.PI/2,  txt:'SÃO CARLOS · SP'},
   ].forEach(({pos,rot,txt},i) => {
     const pl = BABYLON.MeshBuilder.CreatePlane('pain'+i,{width:4,height:1},scene);
     pl.position = pos; pl.rotation.y = rot;
@@ -326,7 +338,7 @@ async function iniciarCena() {
     pl.material=mp;
   });
 
-  // ── Label flutuante ──────────────────────────────────────
+  // ── Label flutuante ────────────────────────────────────
   const labelP = BABYLON.MeshBuilder.CreatePlane('lbl',{width:2.8,height:0.7},scene);
   labelP.position      = new BABYLON.Vector3(0,3.5,0);
   labelP.billboardMode = BABYLON.Mesh.BILLBOARDMODE_ALL;
@@ -336,174 +348,212 @@ async function iniciarCena() {
   matLbl.diffuseTexture=dynTex; matLbl.emissiveTexture=dynTex; matLbl.backFaceCulling=false;
   labelP.material = matLbl;
 
-  function atualizarLabel(v, rpm) {
+  function atualizarLabel(v) {
     const ctx = dynTex.getContext();
     ctx.clearRect(0,0,320,80);
-    ctx.fillStyle='rgba(20,2,4,0.8)'; ctx.beginPath(); ctx.roundRect(3,3,314,74,6); ctx.fill();
-    ctx.strokeStyle='#E3000F'; ctx.lineWidth=1.5; ctx.beginPath(); ctx.roundRect(3,3,314,74,6); ctx.stroke();
+    ctx.fillStyle='rgba(20,2,4,0.8)';
+    ctx.beginPath(); ctx.roundRect(3,3,314,74,6); ctx.fill();
+    ctx.strokeStyle='#E3000F'; ctx.lineWidth=1.5;
+    ctx.beginPath(); ctx.roundRect(3,3,314,74,6); ctx.stroke();
     ctx.fillStyle='#F5A623'; ctx.font='bold 18px monospace'; ctx.textAlign='left';
     ctx.fillText('POT: '+v.toFixed(3),16,32);
-    ctx.fillStyle='#00C9A7'; ctx.fillText('RPM: '+rpm,16,58);
-    ctx.fillStyle='rgba(240,230,230,0.3)'; ctx.font='11px monospace'; ctx.textAlign='right';
-    ctx.fillText('SENAI XR LAB',308,70);
+    ctx.fillStyle='#00C9A7';
+    ctx.fillText('RPM: '+Math.round(v*3600),16,58);
+    ctx.fillStyle='rgba(240,230,230,0.3)'; ctx.font='11px monospace';
+    ctx.textAlign='right'; ctx.fillText('SENAI XR LAB',308,70);
     dynTex.update();
   }
 
-  // ── Partículas ───────────────────────────────────────────
+  // ── Partículas ─────────────────────────────────────────
   const partSys = new BABYLON.ParticleSystem('spark',60,scene);
-  partSys.emitter        = new BABYLON.Vector3(0,2.1,0);
-  partSys.minEmitBox     = new BABYLON.Vector3(-0.1,0,-0.1);
-  partSys.maxEmitBox     = new BABYLON.Vector3( 0.1,0, 0.1);
-  partSys.color1         = new BABYLON.Color4(1.0,0.5,0.1,1);
-  partSys.color2         = new BABYLON.Color4(1.0,0.1,0.1,0.5);
-  partSys.colorDead      = new BABYLON.Color4(0.2,0.0,0.0,0);
-  partSys.minSize        = 0.02; partSys.maxSize     = 0.08;
-  partSys.minLifeTime    = 0.1;  partSys.maxLifeTime = 0.4;
-  partSys.emitRate       = 0;
-  partSys.gravity        = new BABYLON.Vector3(0,-4,0);
-  partSys.direction1     = new BABYLON.Vector3(-1,2,-1);
-  partSys.direction2     = new BABYLON.Vector3( 1,4, 1);
-  partSys.minEmitPower   = 1;    partSys.maxEmitPower = 3;
-  partSys.updateSpeed    = 0.02;
+  partSys.emitter      = new BABYLON.Vector3(0,2.5,0);
+  partSys.minEmitBox   = new BABYLON.Vector3(-0.1,0,-0.1);
+  partSys.maxEmitBox   = new BABYLON.Vector3( 0.1,0, 0.1);
+  partSys.color1       = new BABYLON.Color4(1.0,0.5,0.1,1);
+  partSys.color2       = new BABYLON.Color4(1.0,0.1,0.1,0.5);
+  partSys.colorDead    = new BABYLON.Color4(0.2,0.0,0.0,0);
+  partSys.minSize=0.02; partSys.maxSize=0.08;
+  partSys.minLifeTime=0.1; partSys.maxLifeTime=0.4;
+  partSys.emitRate     = 0;
+  partSys.gravity      = new BABYLON.Vector3(0,-4,0);
+  partSys.direction1   = new BABYLON.Vector3(-1,2,-1);
+  partSys.direction2   = new BABYLON.Vector3( 1,4, 1);
+  partSys.minEmitPower=1; partSys.maxEmitPower=3;
+  partSys.updateSpeed  = 0.02;
   partSys.start();
 
-  // ── Engrenagem GLB ───────────────────────────────────────
-  setProgresso(95, 'Carregando modelo 3D...');
-  let engrenagem = null;
-  let meshesGLB  = [];
+  // ── Engrenagem procedural (fallback) ───────────────────
+  // Usada se o GLB não carregar
+  const engGrupo = new BABYLON.TransformNode('engGrupo', scene);
+  engGrupo.position.y = 0.15;
 
-  try {
-    const resultado = await BABYLON.SceneLoader.ImportMeshAsync(
-      "",
-      "assets/models/",
-      "engrenagem.glb",
-      scene
-    );
+  const matEng = new BABYLON.StandardMaterial('meng',scene);
+  matEng.diffuseColor  = new BABYLON.Color3(0.7,0.5,0.1);
+  matEng.specularColor = new BABYLON.Color3(1.0,0.9,0.5);
+  matEng.specularPower = 256;
 
-    meshesGLB = resultado.meshes;
+  const engBase = BABYLON.MeshBuilder.CreateCylinder('eng',{diameter:1.4,height:0.5,tessellation:8},scene);
+  engBase.parent = engGrupo; engBase.material = matEng;
 
-    // Centraliza e posiciona o modelo
-    const raiz = meshesGLB[0];
-    raiz.position  = new BABYLON.Vector3(0, 0.15, 0);
-
-    // Calcula bounding box para ajustar escala automaticamente
-    raiz.computeWorldMatrix(true);
-    const bb = raiz.getHierarchyBoundingVectors();
-    const tamanho = bb.max.subtract(bb.min);
-    const maior   = Math.max(tamanho.x, tamanho.y, tamanho.z);
-    const escala  = 1.5 / maior;  // normaliza para ~1.5 unidades
-    raiz.scaling  = new BABYLON.Vector3(escala, escala, escala);
-
-    // Aplica material metálico a todos os meshes do GLB
-    meshesGLB.forEach(m => {
-      if (m.material) {
-        // Mantém material original do GLB se tiver
-      } else {
-        const mat = new BABYLON.StandardMaterial('mglb', scene);
-        mat.diffuseColor  = new BABYLON.Color3(0.7, 0.5, 0.1);
-        mat.specularColor = new BABYLON.Color3(1.0, 0.9, 0.5);
-        mat.specularPower = 256;
-        m.material = mat;
-      }
-    });
-
-    engrenagem = raiz;
-
-    // Atualiza posição das partículas para o topo do modelo
-    const alturaModelo = (bb.max.y - bb.min.y) * escala;
-    partSys.emitter = new BABYLON.Vector3(0, alturaModelo + 0.3, 0);
-
-  } catch (err) {
-    console.warn('GLB não encontrado — usando geometria procedural:', err);
-    // Fallback: engrenagem procedural se o GLB não carregar
-    const engBase = BABYLON.MeshBuilder.CreateCylinder('eng',{diameter:1.4,height:0.5,tessellation:8},scene);
-    engBase.position.y = 0.4;
-    const matEng = new BABYLON.StandardMaterial('meng',scene);
-    matEng.diffuseColor  = new BABYLON.Color3(0.7,0.5,0.1);
-    matEng.specularColor = new BABYLON.Color3(1.0,0.9,0.5);
-    matEng.specularPower = 256;
-    engBase.material = matEng;
-    const dentes = [];
-    for (let i = 0; i < 8; i++) {
-      const ang = (i/8)*Math.PI*2;
-      const d = BABYLON.MeshBuilder.CreateBox('d'+i,{width:0.25,height:0.5,depth:0.35},scene);
-      d.position = new BABYLON.Vector3(Math.cos(ang)*0.85, 0.4, Math.sin(ang)*0.85);
-      d.rotation.y = ang; d.material = matEng; dentes.push(d);
-    }
-    const eixo = BABYLON.MeshBuilder.CreateCylinder('eixo',{diameter:0.25,height:2.0,tessellation:16},scene);
-    eixo.position.y = 1.0;
-    const matEixo = new BABYLON.StandardMaterial('meixo',scene);
-    matEixo.diffuseColor=new BABYLON.Color3(0.5,0.5,0.55);
-    matEixo.specularPower=512; eixo.material=matEixo;
-    engrenagem = { rotation: engBase.rotation, _dentes: dentes, _eixo: eixo, _base: engBase };
+  for (let i = 0; i < 8; i++) {
+    const ang = (i/8)*Math.PI*2;
+    const d = BABYLON.MeshBuilder.CreateBox('d'+i,{width:0.25,height:0.5,depth:0.35},scene);
+    d.position  = new BABYLON.Vector3(Math.cos(ang)*0.85, 0, Math.sin(ang)*0.85);
+    d.rotation.y = ang;
+    d.parent    = engGrupo;
+    d.material  = matEng;
   }
 
-  // ── Sensor ───────────────────────────────────────────────
-  let valorSensor = 0;
-  let rotAcum     = 0;
+  const eixo = BABYLON.MeshBuilder.CreateCylinder('eixo',{diameter:0.2,height:2.5,tessellation:16},scene);
+  eixo.parent = engGrupo;
+  const matEixo = new BABYLON.StandardMaterial('meixo',scene);
+  matEixo.diffuseColor=new BABYLON.Color3(0.5,0.5,0.55);
+  matEixo.specularPower=512; eixo.material=matEixo;
 
-  // ── Loop de animação ─────────────────────────────────────
+  // ── Carrega GLB ────────────────────────────────────────
+  setProgresso(95, 'Carregando modelo 3D...');
+
+  try {
+    const partes     = MODEL_URL.split('/');
+    const nomeArq    = partes.pop();
+    const pastaArq   = partes.join('/') + '/';
+
+    const resultado = await BABYLON.SceneLoader.ImportMeshAsync(
+      "", pastaArq, nomeArq, scene,
+      (evt) => {
+        if (evt.total > 0) {
+          const pct = 95 + (evt.loaded / evt.total) * 4;
+          setProgresso(pct, 'Carregando modelo 3D...');
+        }
+      }
+    );
+
+    meshesGLB  = resultado.meshes;
+    usandoGLB  = true;
+
+    // Esconde fallback procedural
+    engGrupo.setEnabled(false);
+
+    // Pega o nó raiz do GLB
+    const raiz = meshesGLB[0];
+
+    // Calcula bounding box para escala automática
+    raiz.computeWorldMatrix(true);
+    meshesGLB.forEach(m => m.computeWorldMatrix(true));
+    const bb     = raiz.getHierarchyBoundingVectors(true);
+    const tam    = bb.max.subtract(bb.min);
+    const maior  = Math.max(tam.x, tam.y, tam.z);
+    const escala = maior > 0 ? (1.8 / maior) : 1;
+
+    raiz.scaling  = new BABYLON.Vector3(escala, escala, escala);
+    raiz.position = new BABYLON.Vector3(0, 0.15, 0);
+
+    // Ajusta emissão de partículas para o topo do modelo
+    partSys.emitter = new BABYLON.Vector3(0, tam.y * escala + 0.3, 0);
+
+    console.log('[GLB] Carregado — meshes:', meshesGLB.length, '| escala:', escala.toFixed(3));
+    meshesGLB.forEach((m,i) => console.log('  mesh['+i+']:', m.name));
+
+  } catch (err) {
+    console.warn('[GLB] Falha ao carregar — usando procedural:', err.message);
+    usandoGLB = false;
+    engGrupo.setEnabled(true);
+  }
+
+  setProgresso(100, 'Pronto!');
+
+  // ═══════════════════════════════════════════════════════
+  //  LOOP DE ANIMAÇÃO
+  // ═══════════════════════════════════════════════════════
   scene.registerBeforeRender(() => {
-    const vel = 0.008 + valorSensor * 0.12;
+    // Velocidade proporcional ao potenciômetro
+    // vel = 0 quando sensor=0, vel máxima quando sensor=1
+    const vel = 0.005 + valorSensor * 0.15;
 
-    // Gira o modelo GLB (ou o fallback procedural)
-    if (engrenagem) {
-      if (engrenagem.rotation) {
-        engrenagem.rotation.y += vel;
-      }
-      // Se for o fallback procedural, gira as peças individualmente
-      if (engrenagem._dentes) {
-        engrenagem._base.rotation.y += vel;
-        engrenagem._dentes.forEach(d => d.rotation.y += vel);
-        engrenagem._eixo.rotation.y -= vel * 0.5;
-      }
+    if (usandoGLB && meshesGLB.length > 0) {
+      // ── GLB: gira todos os meshes exceto o nó raiz __root__ ──
+      meshesGLB.forEach(m => {
+        if (m.name !== '__root__' && m.getTotalVertices() > 0) {
+          m.rotation.y += vel;
+        }
+      });
+    } else {
+      // ── Fallback procedural ──
+      engGrupo.rotation.y += vel;
     }
 
-    anel.position.y  = 0.1 + Math.sin(Date.now()*0.002)*0.02;
-    spot.intensity   = 0.5 + valorSensor * 2.0;
-    partSys.emitRate = valorSensor > 0.6 ? Math.floor(valorSensor*80) : 0;
+    // Efeitos visuais reativos
+    anel.position.y  = 0.1 + Math.sin(Date.now() * 0.002) * 0.02;
+    spot.intensity   = 0.4 + valorSensor * 2.2;
+    partSys.emitRate = valorSensor > 0.6 ? Math.floor(valorSensor * 80) : 0;
 
-    const rpm = Math.round(valorSensor * 3600);
-    rotAcum  += vel;
+    // Acumula rotação para telemetria
+    rotAcum += vel;
 
-    document.getElementById('barra').style.width  = (valorSensor*100)+'%';
-    document.getElementById('num').textContent    = valorSensor.toFixed(3);
-    document.getElementById('rpm-val').textContent = rpm;
-    document.getElementById('t-alt').textContent  = (0.4+valorSensor*0.1).toFixed(2)+'m';
-    document.getElementById('t-rot').textContent  = (rotAcum*180/Math.PI%360).toFixed(0)+'°';
-    document.getElementById('t-temp').textContent = (20+valorSensor*60).toFixed(1)+'°C';
-    atualizarLabel(valorSensor, rpm);
+    // Atualiza HUD e label
+    atualizarHUD(valorSensor);
+    atualizarLabel(valorSensor);
   });
 
   engine.runRenderLoop(() => scene.render());
   window.addEventListener('resize', () => engine.resize());
 
-  // ── WebSocket — conecta ao ESP32 ─────────────────────────
-  const wsConn = new WebSocket(WSS_URL);
-  wsConn.onopen = () => {
-    document.getElementById('dot').className          = 'on';
-    document.getElementById('status-txt').textContent = 'ESP32 conectado ✓  —  gire o potenciômetro';
-  };
-  wsConn.onmessage = (e) => {
-    try {
-      const d = JSON.parse(e.data);
-      if (d.valor !== undefined) valorSensor = Math.max(0, Math.min(1, d.valor));
-    } catch(err) {}
-  };
-  wsConn.onerror = () => {
-    document.getElementById('status-txt').textContent = 'Erro WebSocket — verifique WSS_URL no código';
-  };
-  wsConn.onclose = () => {
-    document.getElementById('dot').className          = '';
-    document.getElementById('status-txt').textContent = 'Desconectado — recarregue a página';
-  };
+  // ═══════════════════════════════════════════════════════
+  //  WEBSOCKET — ESP32
+  // ═══════════════════════════════════════════════════════
+  let msgCount = 0;
 
-  // ── WebXR ────────────────────────────────────────────────
+  function conectarWS() {
+    const wsConn = new WebSocket(WSS_URL);
+
+    wsConn.onopen = () => {
+      document.getElementById('dot').className          = 'on';
+      document.getElementById('status-txt').textContent = 'ESP32 conectado ✓  —  gire o potenciômetro';
+      document.getElementById('t-ws').textContent       = 'OK';
+    };
+
+    wsConn.onmessage = (e) => {
+      try {
+        const d = JSON.parse(e.data);
+        if (typeof d.valor === 'number') {
+          valorSensor = Math.max(0, Math.min(1, d.valor));
+          msgCount++;
+          if (msgCount % 20 === 0) {   // log a cada 2 segundos
+            document.getElementById('t-ws').textContent = msgCount + ' msgs';
+          }
+        }
+      } catch(err) {
+        console.warn('[WS] JSON inválido:', e.data);
+      }
+    };
+
+    wsConn.onerror = (err) => {
+      console.error('[WS] Erro:', err);
+      document.getElementById('status-txt').textContent = 'Erro WebSocket';
+      document.getElementById('t-ws').textContent       = 'ERRO';
+    };
+
+    wsConn.onclose = () => {
+      document.getElementById('dot').className          = '';
+      document.getElementById('status-txt').textContent = 'Desconectado — reconectando...';
+      document.getElementById('t-ws').textContent       = 'RECONECT...';
+      // Tenta reconectar após 3 segundos
+      setTimeout(conectarWS, 3000);
+    };
+  }
+
+  conectarWS();
+
+  // ═══════════════════════════════════════════════════════
+  //  WEBXR
+  // ═══════════════════════════════════════════════════════
   const btnVR = document.getElementById('btn-vr');
   const btnAR = document.getElementById('btn-ar');
 
-  const suportaVR = await BABYLON.WebXRSessionManager.IsSessionSupportedAsync('immersive-vr');
-  const suportaAR = await BABYLON.WebXRSessionManager.IsSessionSupportedAsync('immersive-ar');
+  const [suportaVR, suportaAR] = await Promise.all([
+    BABYLON.WebXRSessionManager.IsSessionSupportedAsync('immersive-vr'),
+    BABYLON.WebXRSessionManager.IsSessionSupportedAsync('immersive-ar')
+  ]);
 
   if (!suportaVR) { btnVR.disabled=true; btnVR.textContent='[ VR NÃO SUPORTADO ]' }
   if (!suportaAR) { btnAR.disabled=true; btnAR.textContent='[ AR NÃO SUPORTADO ]' }
@@ -535,34 +585,58 @@ async function iniciarCena() {
   });
 }
 
-// ── Carrega Babylon.js ───────────────────────────────────────
-setProgresso(10, 'Baixando Babylon.js...');
-const script = document.createElement('script');
-script.src = 'https://cdn.jsdelivr.net/npm/babylonjs@6.48.1/babylon.min.js';
-script.onload = () => {
-  setProgresso(80, 'Carregando loaders...');
-  // Carrega o plugin GLTF/GLB
-  const s2 = document.createElement('script');
-  s2.src = 'https://cdn.jsdelivr.net/npm/babylonjs-loaders@6.48.1/babylonjs.loaders.min.js';
-  s2.onload = () => { setProgresso(90,'Iniciando cena...'); setTimeout(()=>iniciarCena(),100); };
-  s2.onerror = () => mostrarErro('Falha ao carregar loader GLB.');
-  document.head.appendChild(s2);
-};
-script.onerror = () => {
-  mostrarErro('jsdelivr falhou — tentando fallback...');
-  const sf = document.createElement('script');
-  sf.src = 'https://unpkg.com/babylonjs@6.48.1/babylon.min.js';
-  sf.onload = () => {
-    const sf2 = document.createElement('script');
-    sf2.src = 'https://unpkg.com/babylonjs-loaders@6.48.1/babylonjs.loaders.min.js';
-    sf2.onload = () => { setProgresso(90,'Iniciando...'); setTimeout(()=>iniciarCena(),100); };
-    document.head.appendChild(sf2);
-  };
-  sf.onerror = () => mostrarErro('Falha ao carregar Babylon.js. Verifique a conexão.');
-  document.head.appendChild(sf);
-};
-document.head.appendChild(script);
-setProgresso(30);
+// ═══════════════════════════════════════════════════════════
+//  CARREGAMENTO — Babylon.js + loader GLB
+// ═══════════════════════════════════════════════════════════
+function carregarScript(url) {
+  return new Promise((ok, err) => {
+    const s = document.createElement('script');
+    s.src = url; s.onload = ok; s.onerror = err;
+    document.head.appendChild(s);
+  });
+}
+
+async function carregarBabylon() {
+  const cdns = [
+    'https://cdn.jsdelivr.net/npm/babylonjs@6.48.1/babylon.min.js',
+    'https://unpkg.com/babylonjs@6.48.1/babylon.min.js'
+  ];
+  const loaders = [
+    'https://cdn.jsdelivr.net/npm/babylonjs-loaders@6.48.1/babylonjs.loaders.min.js',
+    'https://unpkg.com/babylonjs-loaders@6.48.1/babylonjs.loaders.min.js'
+  ];
+
+  setProgresso(10, 'Baixando Babylon.js...');
+
+  for (const url of cdns) {
+    try {
+      await carregarScript(url);
+      setProgresso(60, 'Carregando plugin GLB...');
+      break;
+    } catch(e) {
+      console.warn('[LOAD] CDN falhou, tentando próxima:', url);
+    }
+  }
+
+  if (typeof BABYLON === 'undefined') {
+    mostrarErro('Falha ao carregar Babylon.js. Verifique sua conexão.');
+    return;
+  }
+
+  for (const url of loaders) {
+    try {
+      await carregarScript(url);
+      setProgresso(80, 'Iniciando cena...');
+      break;
+    } catch(e) {
+      console.warn('[LOAD] Loader CDN falhou, tentando próxima:', url);
+    }
+  }
+
+  setTimeout(() => iniciarCena(), 100);
+}
+
+carregarBabylon();
 </script>
 </body>
 </html>
