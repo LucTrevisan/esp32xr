@@ -435,26 +435,30 @@ async function iniciarCena() {
     // Esconde fallback procedural
     engGrupo.setEnabled(false);
 
-    // __root__ é TransformNode — buscar nos transformNodes do resultado
-    rootGLB = (resultado.transformNodes || []).find(n => n.name === '__root__')
-           || scene.getTransformNodeByName('__root__')
-           || meshesGLB[0];
+    // Cria um nó pai para agrupar todos os meshes do GLB
+    // Isso garante rotação correta em torno do centro da cena
+    rootGLB = new BABYLON.TransformNode('glbRoot', scene);
+    rootGLB.position = new BABYLON.Vector3(0, 0.15, 0);
+
+    // Reparenta todos os meshes para o novo nó pai
+    meshesGLB.forEach(m => {
+      m.parent = rootGLB;
+    });
 
     const raiz = rootGLB;
 
     // Calcula bounding box para escala automática
-    raiz.computeWorldMatrix(true);
     meshesGLB.forEach(m => m.computeWorldMatrix(true));
-    const bb     = raiz.getHierarchyBoundingVectors(true);
+    const bb     = rootGLB.getHierarchyBoundingVectors(true);
     const tam    = bb.max.subtract(bb.min);
     const maior  = Math.max(tam.x, tam.y, tam.z);
     const escala = maior > 0 ? (1.8 / maior) : 1;
 
-    raiz.scaling  = new BABYLON.Vector3(escala, escala, escala);
-    raiz.position = new BABYLON.Vector3(0, 0.15, 0);
+    // Aplica escala no rootGLB — afeta todos os filhos
+    rootGLB.scaling  = new BABYLON.Vector3(escala, escala, escala);
 
     // Ajusta emissão de partículas para o topo do modelo
-    partSys.emitter = new BABYLON.Vector3(0, tam.y * escala + 0.3, 0);
+    partSys.emitter = new BABYLON.Vector3(0, tam.y * escala + 0.5, 0);
 
     console.log('[GLB] Carregado — meshes:', meshesGLB.length, '| escala:', escala.toFixed(3));
     meshesGLB.forEach((m,i) => console.log('  mesh['+i+']:', m.name));
@@ -476,7 +480,7 @@ async function iniciarCena() {
     const vel = 0.005 + valorSensor * 0.15;
 
     if (usandoGLB && rootGLB) {
-      // __root__ é TransformNode — girar ele arrasta todos os filhos
+      // Gira o nó pai — todos os meshes do GLB seguem juntos
       rootGLB.rotation.y += vel;
     } else {
       // ── Fallback procedural ──
