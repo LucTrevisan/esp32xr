@@ -180,9 +180,9 @@
 <canvas id="cvs" style="display:none"></canvas>
 
 <script>
-// ── IP do ESP32 — altere se necessário ───────────────────────
-// Se o ESP32 estiver na mesma rede, coloque o IP aqui:
-const ESP32_IP = "192.168.15.100";
+// ── URL do túnel Cloudflare (WSS) ────────────────────────────
+// Gerar com: cloudflared tunnel --url http://IP_ESP32:81
+const WSS_URL = "wss://previously-tune-urgent-similar.trycloudflare.com";
 // ────────────────────────────────────────────────────────────
 
 function setProgresso(pct, txt) {
@@ -479,7 +479,7 @@ async function iniciarCena() {
   window.addEventListener('resize', () => engine.resize());
 
   // ── WebSocket — conecta ao ESP32 ─────────────────────────
-  const wsConn = new WebSocket('ws://' + ESP32_IP + ':81');
+  const wsConn = new WebSocket(WSS_URL);
   wsConn.onopen = () => {
     document.getElementById('dot').className          = 'on';
     document.getElementById('status-txt').textContent = 'ESP32 conectado ✓  —  gire o potenciômetro';
@@ -491,7 +491,7 @@ async function iniciarCena() {
     } catch(err) {}
   };
   wsConn.onerror = () => {
-    document.getElementById('status-txt').textContent = 'Erro WebSocket — verifique ESP32_IP no código';
+    document.getElementById('status-txt').textContent = 'Erro WebSocket — verifique WSS_URL no código';
   };
   wsConn.onclose = () => {
     document.getElementById('dot').className          = '';
