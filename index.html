@@ -172,12 +172,18 @@
 
 <canvas id="cvs" style="display:none"></canvas>
 
+<!-- MQTT.js — cliente MQTT sobre WebSocket -->
+<script src="https://unpkg.com/mqtt@5.3.4/dist/mqtt.min.js"></script>
+
 <script>
 // ═══════════════════════════════════════════════════════════
-//  CONFIGURAÇÃO — altere aqui quando o túnel mudar
+//  CONFIGURAÇÃO — MQTT sobre WSS
+//  Broker público HiveMQ — sem túnel, sem IP fixo
+//  Mesmo tópico configurado no ESP32
 // ═══════════════════════════════════════════════════════════
-const WSS_URL   = "wss://previously-tune-urgent-similar.trycloudflare.com";
-const MODEL_URL = "assets/models/engrenagem.glb";
+const MQTT_BROKER = "wss://broker.hivemq.com:8884/mqtt";
+const MQTT_TOPICO = "senai/esp32xr/sensor";
+const MODEL_URL   = "https://luctrevisan.github.io/esp32xr/assets/models/engrenagem.glb";
 // ═══════════════════════════════════════════════════════════
 
 // ── Utilitários de loading ───────────────────────────────────
@@ -514,46 +520,74 @@ async function iniciarCena() {
   // ═══════════════════════════════════════════════════════
   let msgCount = 0;
 
-  function conectarWS() {
-    const wsConn = new WebSocket(WSS_URL);
+  // ── MQTT.js — broker público HiveMQ ─────────────────────────
+  let msgCount  = 0;
+  let mqttClient = null;
 
-    wsConn.onopen = () => {
+  function conectarMQTT() {
+    document.getElementById('status-txt').textContent = 'Conectando ao broker MQTT...';
+    document.getElementById('t-ws').textContent       = 'MQTT...';
+
+    const clientId = 'senai-browser-' + Math.random().toString(16).substr(2, 8);
+
+    mqttClient = mqtt.connect(MQTT_BROKER, {
+      clientId:      clientId,
+      keepalive:     30,
+      reconnectPeriod: 3000,
+      connectTimeout:  5000,
+      clean:         true
+    });
+
+    mqttClient.on('connect', () => {
+      console.log('[MQTT] Conectado ao broker HiveMQ');
       document.getElementById('dot').className          = 'on';
-      document.getElementById('status-txt').textContent = 'ESP32 conectado ✓  —  gire o potenciômetro';
-      document.getElementById('t-ws').textContent       = 'OK';
-    };
+      document.getElementById('status-txt').textContent = 'MQTT conectado ✓  —  gire o potenciômetro';
+      document.getElementById('t-ws').textContent       = 'MQTT OK';
 
-    wsConn.onmessage = (e) => {
+      // Assina o tópico do ESP32
+      mqttClient.subscribe(MQTT_TOPICO, { qos: 0 }, (err) => {
+        if (err) {
+          console.error('[MQTT] Erro ao assinar:', err);
+        } else {
+          console.log('[MQTT] Assinando:', MQTT_TOPICO);
+        }
+      });
+    });
+
+    mqttClient.on('message', (topico, payload) => {
       try {
-        const d = JSON.parse(e.data);
+        const d = JSON.parse(payload.toString());
         if (typeof d.valor === 'number') {
           valorSensor = Math.max(0, Math.min(1, d.valor));
           msgCount++;
-          if (msgCount % 20 === 0) {   // log a cada 2 segundos
+          if (msgCount % 20 === 0) {
             document.getElementById('t-ws').textContent = msgCount + ' msgs';
           }
         }
       } catch(err) {
-        console.warn('[WS] JSON inválido:', e.data);
+        console.warn('[MQTT] Payload inválido:', payload.toString());
       }
-    };
+    });
 
-    wsConn.onerror = (err) => {
-      console.error('[WS] Erro:', err);
-      document.getElementById('status-txt').textContent = 'Erro WebSocket';
-      document.getElementById('t-ws').textContent       = 'ERRO';
-    };
-
-    wsConn.onclose = () => {
+    mqttClient.on('reconnect', () => {
       document.getElementById('dot').className          = '';
-      document.getElementById('status-txt').textContent = 'Desconectado — reconectando...';
+      document.getElementById('status-txt').textContent = 'MQTT reconectando...';
       document.getElementById('t-ws').textContent       = 'RECONECT...';
-      // Tenta reconectar após 3 segundos
-      setTimeout(conectarWS, 3000);
-    };
+    });
+
+    mqttClient.on('error', (err) => {
+      console.error('[MQTT] Erro:', err.message);
+      document.getElementById('status-txt').textContent = 'Erro MQTT: ' + err.message;
+      document.getElementById('t-ws').textContent       = 'ERRO';
+    });
+
+    mqttClient.on('offline', () => {
+      document.getElementById('dot').className          = '';
+      document.getElementById('status-txt').textContent = 'MQTT offline — reconectando...';
+    });
   }
 
-  conectarWS();
+  conectarMQTT();
 
   // ═══════════════════════════════════════════════════════
   //  WEBXR
@@ -616,6 +650,10 @@ async function carregarBabylon() {
     'https://cdn.jsdelivr.net/npm/babylonjs-loaders@6.48.1/babylonjs.loaders.min.js',
     'https://unpkg.com/babylonjs-loaders@6.48.1/babylonjs.loaders.min.js'
   ];
+  // Draco decoder — necessário se o GLB foi comprimido com Draco (gltf.report)
+  const dracos = [
+    'https://cdn.jsdelivr.net/npm/babylonjs@6.48.1/draco_decoder.js',
+  ];
 
   setProgresso(10, 'Baixando Babylon.js...');
 
@@ -642,6 +680,20 @@ async function carregarBabylon() {
     } catch(e) {
       console.warn('[LOAD] Loader CDN falhou, tentando próxima:', url);
     }
+  }
+
+  // Carrega Draco decoder (necessário para GLB comprimido)
+  try {
+    await carregarScript('https://cdn.jsdelivr.net/npm/babylonjs@6.48.1/draco_decoder.js');
+    BABYLON.DracoCompression.Configuration = {
+      decoder: {
+        wasmUrl:     "https://cdn.jsdelivr.net/npm/babylonjs@6.48.1/draco_decoder.wasm",
+        wasmBinaryUrl: "https://cdn.jsdelivr.net/npm/babylonjs@6.48.1/draco_decoder.wasm",
+        fallbackUrl: "https://cdn.jsdelivr.net/npm/babylonjs@6.48.1/draco_decoder.js"
+      }
+    };
+  } catch(e) {
+    console.warn('[DRACO] Decoder não carregado — GLB sem compressão Draco deve funcionar normalmente');
   }
 
   setTimeout(() => iniciarCena(), 100);
