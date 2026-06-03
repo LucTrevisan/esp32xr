@@ -515,10 +515,6 @@ async function iniciarCena() {
   engine.runRenderLoop(() => scene.render());
   window.addEventListener('resize', () => engine.resize());
 
-  // ═══════════════════════════════════════════════════════
-  //  WEBSOCKET — ESP32
-  // ═══════════════════════════════════════════════════════
-  let msgCount = 0;
 
   // ── MQTT.js — broker público HiveMQ ─────────────────────────
   let msgCount  = 0;
